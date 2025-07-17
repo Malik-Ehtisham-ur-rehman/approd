@@ -5,10 +5,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 from datetime import datetime, timedelta
-import warnings
-warnings.filterwarnings('ignore')
+import io
 
-# Page configuration
+# Set page configuration
 st.set_page_config(
     page_title="Service Business KPI Dashboard",
     page_icon="🔧",
@@ -16,646 +15,947 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for beautiful styling
+# Custom CSS for better styling
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
     .main-header {
-        font-family: 'Inter', sans-serif;
-        font-size: 3rem;
-        font-weight: 700;
-        background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-size: 2.5rem;
+        color: #1f77b4;
         text-align: center;
-        margin-bottom: 3rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        font-weight: bold;
     }
-    
-    .metric-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin: 0.5rem;
-        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        color: white;
-        transition: transform 0.3s ease;
-    }
-    
-    .metric-container:hover {
-        transform: translateY(-5px);
-    }
-    
-    .metric-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-    
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
+    .kpi-card {
+        background-color: #f0f2f6;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #1f77b4;
         margin: 0.5rem 0;
-        color: white;
     }
-    
-    .metric-label {
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #1f77b4;
+    }
+    .kpi-label {
         font-size: 1rem;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+    .progress-kpi {
+        background-color: white;
+        padding: 0.8rem;
+        border-radius: 5px;
+        border: 1px solid #e0e0e0;
+        margin: 0.3rem 0;
+    }
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .progress-label {
+        font-size: 0.9rem;
         font-weight: 500;
-        color: rgba(255, 255, 255, 0.9);
-        margin-bottom: 0;
+        color: #333;
     }
-    
-    .sidebar-header {
-        font-family: 'Inter', sans-serif;
-        font-size: 1.3rem;
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 1.5rem;
-        padding: 1rem;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        border-radius: 10px;
-        text-align: center;
+    .progress-value {
+        font-size: 0.9rem;
+        font-weight: bold;
+        color: #1f77b4;
     }
-    
-    .upload-section {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
+    .progress-goal {
+        font-size: 0.8rem;
+        color: #666;
     }
-    
-    .status-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        color: white;
-        text-align: center;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-    }
-    
-    .quality-excellent {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    }
-    
-    .quality-good {
-        background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
-    }
-    
-    .quality-poor {
-        background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%);
-    }
-    
-    .section-header {
-        font-family: 'Inter', sans-serif;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #2c3e50;
-        margin: 2rem 0 1rem 0;
-        padding: 0.5rem 0;
-        border-bottom: 2px solid #667eea;
-    }
-    
-    .info-box {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        border-left: 4px solid #667eea;
-    }
-    
-    .stSelectbox > div > div {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 10px;
-    }
-    
-    .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 0.5rem 2rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    }
-    
-    .chart-container {
-        background: white;
-        padding: 1rem;
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
-        margin: 1rem 0;
+    .stSelectbox > div > div > select {
+        background-color: #ffffff;
     }
 </style>
 """, unsafe_allow_html=True)
 
-class ServiceKPIDashboard:
+class ServiceDashboard:
     def __init__(self):
         self.appointments_df = None
-        self.invoice_df = None
+        self.items_sold_df = None
+        self.opportunities_df = None
         self.job_times_df = None
-        self.merged_data = None
+        self.merged_df = None
         
-    def load_data(self, appointments_file, invoice_file, job_times_file):
-        """Load and validate the three Excel files"""
+    def load_data(self, appointments_file, items_sold_file, opportunities_file, job_times_file):
+        """Load and process all data files"""
         try:
             # Load appointments data
-            self.appointments_df = pd.read_excel(appointments_file)
-            # Clean column names
-            self.appointments_df.columns = self.appointments_df.columns.str.strip()
-            
-            # Load invoice data
-            self.invoice_df = pd.read_excel(invoice_file)
-            self.invoice_df.columns = self.invoice_df.columns.str.strip()
-            
+            if appointments_file:
+                self.appointments_df = pd.read_excel(appointments_file)
+                self.appointments_df.columns = self.appointments_df.columns.str.strip()
+                
+            # Load items sold data
+            if items_sold_file:
+                self.items_sold_df = pd.read_excel(items_sold_file)
+                self.items_sold_df.columns = self.items_sold_df.columns.str.strip()
+                
+            # Load opportunities data
+            if opportunities_file:
+                self.opportunities_df = pd.read_excel(opportunities_file)
+                self.opportunities_df.columns = self.opportunities_df.columns.str.strip()
+                
             # Load job times data
-            self.job_times_df = pd.read_excel(job_times_file)
-            self.job_times_df.columns = self.job_times_df.columns.str.strip()
-            
-            return True, "Data loaded successfully!"
+            if job_times_file:
+                self.job_times_df = pd.read_excel(job_times_file)
+                self.job_times_df.columns = self.job_times_df.columns.str.strip()
+                
+            return True
         except Exception as e:
-            return False, f"Error loading data: {str(e)}"
-    
-    def validate_data(self):
-        """Validate data structure and common identifiers"""
-        validation_results = []
-        
-        # Check required columns in appointments
-        required_appointments_cols = ['Job', 'Technician', 'Service Category', 'Appt Status', 'Revenue']
-        missing_cols = [col for col in required_appointments_cols if col not in self.appointments_df.columns]
-        if missing_cols:
-            validation_results.append(f"Missing columns in Appointments: {missing_cols}")
-        
-        # Check required columns in invoice
-        required_invoice_cols = ['Job', 'Category', 'Line Item', 'Price']
-        missing_cols = [col for col in required_invoice_cols if col not in self.invoice_df.columns]
-        if missing_cols:
-            validation_results.append(f"Missing columns in Invoice: {missing_cols}")
-        
-        # Check required columns in job times
-        required_job_times_cols = ['Job', 'Opportunity Owner', 'End Result', 'Job Efficiency']
-        missing_cols = [col for col in required_job_times_cols if col not in self.job_times_df.columns]
-        if missing_cols:
-            validation_results.append(f"Missing columns in Job Times: {missing_cols}")
-        
-        return validation_results
+            st.error(f"Error loading data: {str(e)}")
+            return False
     
     def merge_data(self):
-        """Merge the three datasets using common identifiers"""
+        """Merge all data sources using common identifiers"""
         try:
-            # Start with job times as the base (contains opportunity owners)
-            base_df = self.job_times_df.copy()
-            
-            # Merge with appointments data
-            merged = pd.merge(
-                base_df,
-                self.appointments_df,
-                on='Job',
-                how='left',
-                suffixes=('_job_times', '_appointments')
-            )
-            
-            # Merge with invoice data
-            merged = pd.merge(
-                merged,
-                self.invoice_df,
-                on='Job',
-                how='left',
-                suffixes=('', '_invoice')
-            )
-            
-            self.merged_data = merged
-            return True, f"Data merged successfully! Total records: {len(merged)}"
+            # Start with appointments as base
+            if self.appointments_df is not None:
+                merged = self.appointments_df.copy()
+                
+                # Add job times data
+                if self.job_times_df is not None:
+                    # Clean job column names and merge
+                    job_merge_cols = []
+                    if 'Job' in merged.columns and 'Job' in self.job_times_df.columns:
+                        job_merge_cols = ['Job']
+                    elif 'Job ID' in merged.columns and 'Job ID' in self.job_times_df.columns:
+                        job_merge_cols = ['Job ID']
+                    
+                    if job_merge_cols:
+                        merged = pd.merge(merged, self.job_times_df, on=job_merge_cols, how='left', suffixes=('', '_job'))
+                
+                # Add opportunities data
+                if self.opportunities_df is not None:
+                    opp_merge_cols = []
+                    if 'Job' in merged.columns and 'Job' in self.opportunities_df.columns:
+                        opp_merge_cols = ['Job']
+                    
+                    if opp_merge_cols:
+                        merged = pd.merge(merged, self.opportunities_df, on=opp_merge_cols, how='left', suffixes=('', '_opp'))
+                
+                # Add items sold data - merge on customer email or other identifiers
+                if self.items_sold_df is not None:
+                    if 'Customer Email' in merged.columns and 'Customer Email' in self.items_sold_df.columns:
+                        items_agg = self.items_sold_df.groupby('Customer Email').agg({
+                            'Price': 'sum',
+                            'Quantity': 'sum',
+                            'Line Item': lambda x: ', '.join(x.unique())
+                        }).reset_index()
+                        items_agg.columns = ['Customer Email', 'Total_Items_Price', 'Total_Items_Qty', 'Items_Sold']
+                        merged = pd.merge(merged, items_agg, on='Customer Email', how='left')
+                
+                self.merged_df = merged
+                return True
+            else:
+                st.error("No appointments data found")
+                return False
+                
         except Exception as e:
-            return False, f"Error merging data: {str(e)}"
+            st.error(f"Error merging data: {str(e)}")
+            return False
     
-    def calculate_hydro_jetting_sold(self, owner=None):
-        """Calculate Hydro Jetting services sold"""
+    def calculate_avg_ticket(self, technician=None):
+        """Calculate Average Ticket Value"""
         try:
-            df = self.merged_data.copy()
-            if owner:
-                df = df[df['Opportunity Owner'] == owner]
-            
-            # Look for hydro jetting related services
-            hydro_keywords = ['jetting', 'hydro', 'sewer jetting']
-            hydro_services = df[
-                df['Service Category'].str.contains('|'.join(hydro_keywords), case=False, na=False) |
-                df['Category'].str.contains('|'.join(hydro_keywords), case=False, na=False) |
-                df['Line Item'].str.contains('|'.join(hydro_keywords), case=False, na=False)
-            ]
-            
-            return len(hydro_services)
-        except:
-            return 0
-    
-    def calculate_descaling_sold(self, owner=None):
-        """Calculate Descaling services sold"""
-        try:
-            df = self.merged_data.copy()
-            if owner:
-                df = df[df['Opportunity Owner'] == owner]
-            
-            # Look for descaling related services
-            descaling_keywords = ['descaling', 'descale', 'scale removal']
-            descaling_services = df[
-                df['Service Category'].str.contains('|'.join(descaling_keywords), case=False, na=False) |
-                df['Category'].str.contains('|'.join(descaling_keywords), case=False, na=False) |
-                df['Line Item'].str.contains('|'.join(descaling_keywords), case=False, na=False)
-            ]
-            
-            return len(descaling_services)
-        except:
-            return 0
-    
-    def calculate_on_time_arrival(self, owner=None):
-        """Calculate on-time arrival rate"""
-        try:
-            df = self.merged_data.copy()
-            if owner:
-                df = df[df['Opportunity Owner'] == owner]
-            
-            # Consider completed appointments only
-            completed_appts = df[df['Appt Status'] == 'Completed']
-            if len(completed_appts) == 0:
+            if self.merged_df is None:
                 return 0
             
-            # For this example, we'll use job efficiency as a proxy
-            # Jobs with efficiency >= 90% are considered on-time
-            on_time = completed_appts[
-                completed_appts['Job Efficiency'].str.replace('%', '').astype(float, errors='ignore') >= 90
-            ]
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
             
-            return round((len(on_time) / len(completed_appts)) * 100, 1)
+            if 'Revenue' in df.columns:
+                completed_jobs = df[df['Appt Status'] == 'Completed']
+                if len(completed_jobs) > 0:
+                    return completed_jobs['Revenue'].mean()
+            return 0
         except:
             return 0
     
-    def calculate_five_star_reviews(self, owner=None):
-        """Calculate 5-star reviews percentage (simulated)"""
+    def calculate_job_close_rate(self, technician=None):
+        """Calculate Job Close Rate"""
         try:
-            df = self.merged_data.copy()
-            if owner:
-                df = df[df['Opportunity Owner'] == owner]
-            
-            # Simulate 5-star reviews based on completed jobs
-            # Higher efficiency jobs more likely to get 5-star reviews
-            completed_jobs = df[df['End Result'] == 'Won']
-            
-            if len(completed_jobs) == 0:
+            if self.merged_df is None:
                 return 0
             
-            # Simulate based on job efficiency
-            five_star_rate = np.random.uniform(0.7, 0.95)  # 70-95% range
-            return round(five_star_rate * 100, 1)
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            completed = df[df['Appt Status'] == 'Completed'].shape[0]
+            total = df.shape[0]
+            return (completed / total * 100) if total > 0 else 0
         except:
             return 0
     
-    def calculate_warranty_call_rate(self, owner=None):
-        """Calculate warranty call rate"""
+    def calculate_weekly_revenue(self, technician=None):
+        """Calculate Weekly Revenue"""
         try:
-            df = self.merged_data.copy()
-            if owner:
-                df = df[df['Opportunity Owner'] == owner]
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            if 'Revenue' in df.columns and 'Created At' in df.columns:
+                # Convert to datetime if not already
+                df['Created At'] = pd.to_datetime(df['Created At'], errors='coerce')
+                # Get current week's revenue
+                current_week = df[df['Created At'] >= (datetime.now() - timedelta(days=7))]
+                return current_week['Revenue'].sum()
+            return 0
+        except:
+            return 0
+    
+    def calculate_avg_job_efficiency(self, technician=None):
+        """Calculate Average Job Efficiency"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            if 'Job Efficiency' in df.columns:
+                efficiency_data = df[df['Job Efficiency'].notna()]
+                if len(efficiency_data) > 0:
+                    # Handle different data types in efficiency column
+                    efficiency_values = []
+                    for val in efficiency_data['Job Efficiency']:
+                        try:
+                            if isinstance(val, str):
+                                # Remove % sign if present and convert to float
+                                val_clean = val.replace('%', '').strip()
+                                efficiency_values.append(float(val_clean))
+                            elif isinstance(val, (int, float)):
+                                efficiency_values.append(float(val))
+                        except (ValueError, TypeError):
+                            continue
+                    
+                    if efficiency_values:
+                        return sum(efficiency_values) / len(efficiency_values)
+            return 0
+        except:
+            return 0
+    
+    def calculate_compliance_rate(self, technician=None):
+        """Calculate Compliance Rate (based on completed jobs without issues)"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            # Assume compliance based on completed jobs with good efficiency
+            completed_jobs = df[df['Appt Status'] == 'Completed']
+            if len(completed_jobs) > 0:
+                if 'Job Efficiency' in df.columns:
+                    good_efficiency = completed_jobs[completed_jobs['Job Efficiency'].notna()]
+                    if len(good_efficiency) > 0:
+                        # Handle efficiency values
+                        compliant_count = 0
+                        for val in good_efficiency['Job Efficiency']:
+                            try:
+                                if isinstance(val, str):
+                                    val_clean = val.replace('%', '').strip()
+                                    if float(val_clean) >= 80:
+                                        compliant_count += 1
+                                elif isinstance(val, (int, float)) and val >= 80:
+                                    compliant_count += 1
+                            except (ValueError, TypeError):
+                                continue
+                        
+                        return (compliant_count / len(completed_jobs) * 100)
+                else:
+                    return 95  # Default high compliance for completed jobs
+            return 0
+        except:
+            return 0
+    
+    def calculate_membership_win_rate(self, technician=None):
+        """Calculate Membership Win Rate"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            # Check for membership sales in opportunities or items sold
+            membership_wins = 0
+            total_opportunities = len(df)
+            
+            if 'Items_Sold' in df.columns:
+                membership_wins = df[df['Items_Sold'].str.contains('Membership', case=False, na=False)].shape[0]
+            elif 'Service Category' in df.columns:
+                membership_wins = df[df['Service Category'].str.contains('Membership', case=False, na=False)].shape[0]
+            
+            return (membership_wins / total_opportunities * 100) if total_opportunities > 0 else 0
+        except:
+            return 0
+    
+    def calculate_kpi_hydro_jetting(self, technician=None):
+        """Calculate Hydro Jetting Sold KPI"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            # Count hydro jetting services
+            hydro_count = 0
+            if 'Service Category' in df.columns:
+                hydro_count = df[df['Service Category'].str.contains('Jetting', case=False, na=False)].shape[0]
+            
+            # Also check in items sold
+            if 'Items_Sold' in df.columns:
+                hydro_items = df[df['Items_Sold'].str.contains('Jetting', case=False, na=False)].shape[0]
+                hydro_count += hydro_items
+            
+            return hydro_count
+        except:
+            return 0
+    
+    def calculate_kpi_descaling(self, technician=None):
+        """Calculate Descaling Sold KPI"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            # Count descaling services
+            descaling_count = 0
+            if 'Service Category' in df.columns:
+                descaling_count = df[df['Service Category'].str.contains('Descal', case=False, na=False)].shape[0]
+            
+            # Also check in items sold
+            if 'Items_Sold' in df.columns:
+                descaling_items = df[df['Items_Sold'].str.contains('Descal', case=False, na=False)].shape[0]
+                descaling_count += descaling_items
+            
+            return descaling_count
+        except:
+            return 0
+    
+    def calculate_on_time_arrival(self, technician=None):
+        """Calculate On-Time Arrival Rate"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            # Check if we have time data
+            if 'Job Efficiency' in df.columns:
+                # Consider jobs with efficiency >= 80% as on-time
+                on_time_count = 0
+                total_count = 0
+                
+                for val in df['Job Efficiency']:
+                    if pd.notna(val):
+                        try:
+                            if isinstance(val, str):
+                                val_clean = val.replace('%', '').strip()
+                                if float(val_clean) >= 80:
+                                    on_time_count += 1
+                            elif isinstance(val, (int, float)) and val >= 80:
+                                on_time_count += 1
+                            total_count += 1
+                        except (ValueError, TypeError):
+                            continue
+                
+                return (on_time_count / total_count * 100) if total_count > 0 else 0
+            else:
+                # Fallback: completed appointments as on-time
+                on_time = df[df['Appt Status'] == 'Completed'].shape[0]
+                total = df.shape[0]
+                return (on_time / total * 100) if total > 0 else 0
+        except:
+            return 0
+    
+    def calculate_five_star_reviews(self, technician=None):
+        """Calculate 5★ Reviews (simulated based on completed jobs)"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            # Simulate 5-star reviews based on completed jobs and efficiency
+            completed_jobs = df[df['Appt Status'] == 'Completed']
+            
+            if 'Job Efficiency' in df.columns:
+                # High efficiency jobs more likely to get 5 stars
+                high_efficiency_count = 0
+                for val in completed_jobs['Job Efficiency']:
+                    if pd.notna(val):
+                        try:
+                            if isinstance(val, str):
+                                val_clean = val.replace('%', '').strip()
+                                if float(val_clean) >= 90:
+                                    high_efficiency_count += 1
+                            elif isinstance(val, (int, float)) and val >= 90:
+                                high_efficiency_count += 1
+                        except (ValueError, TypeError):
+                            continue
+                
+                return high_efficiency_count
+            else:
+                # Fallback: assume 70% of completed jobs get 5 stars
+                return int(completed_jobs.shape[0] * 0.7)
+        except:
+            return 0
+    
+    def calculate_warranty_call_rate(self, technician=None):
+        """Calculate Warranty Call Rate"""
+        try:
+            if self.merged_df is None:
+                return 0
+            
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
             
             # Look for warranty-related services
-            warranty_keywords = ['warranty', 'callback', 'return', 'follow-up']
-            warranty_calls = df[
-                df['Service Category'].str.contains('|'.join(warranty_keywords), case=False, na=False) |
-                df['Category'].str.contains('|'.join(warranty_keywords), case=False, na=False) |
-                df['Line Item'].str.contains('|'.join(warranty_keywords), case=False, na=False)
-            ]
+            warranty_calls = 0
+            if 'Service Category' in df.columns:
+                warranty_calls = df[df['Service Category'].str.contains('Warranty|warranty', case=False, na=False)].shape[0]
             
-            total_completed = len(df[df['End Result'] == 'Won'])
-            if total_completed == 0:
-                return 0
-            
-            return round((len(warranty_calls) / total_completed) * 100, 1)
+            # Calculate as percentage of total jobs
+            total_jobs = df.shape[0]
+            return (warranty_calls / total_jobs * 100) if total_jobs > 0 else 0
         except:
             return 0
     
-    def calculate_upsell_conversion(self, owner=None):
-        """Calculate upsell conversion rate"""
+    def calculate_upsell_conversion(self, technician=None):
+        """Calculate Upsell Conversion Rate"""
         try:
-            df = self.merged_data.copy()
-            if owner:
-                df = df[df['Opportunity Owner'] == owner]
-            
-            # Group by job and count line items
-            job_items = df.groupby('Job')['Line Item'].nunique().reset_index()
-            
-            # Jobs with more than 1 line item are considered upsells
-            upsell_jobs = job_items[job_items['Line Item'] > 1]
-            total_jobs = len(job_items)
-            
-            if total_jobs == 0:
+            if self.merged_df is None:
                 return 0
             
-            return round((len(upsell_jobs) / total_jobs) * 100, 1)
+            df = self.merged_df.copy()
+            if technician and technician != 'All':
+                df = df[df['Technician'] == technician]
+            
+            # Count jobs with multiple items or high revenue
+            upsell_jobs = 0
+            if 'Total_Items_Qty' in df.columns:
+                upsell_jobs = df[df['Total_Items_Qty'] > 1].shape[0]
+            elif 'Revenue' in df.columns:
+                # High revenue jobs might indicate upsells
+                avg_revenue = df['Revenue'].mean()
+                upsell_jobs = df[df['Revenue'] > avg_revenue * 1.5].shape[0]
+            
+            total_jobs = df.shape[0]
+            return (upsell_jobs / total_jobs * 100) if total_jobs > 0 else 0
         except:
             return 0
     
-    def get_opportunity_owners(self):
-        """Get list of unique opportunity owners"""
-        if self.merged_data is not None:
-            return self.merged_data['Opportunity Owner'].dropna().unique().tolist()
-        return []
+    def get_technicians(self):
+        """Get list of all technicians"""
+        if self.merged_df is None:
+            return ['All']
+        
+        technicians = ['All']
+        if 'Technician' in self.merged_df.columns:
+            unique_techs = self.merged_df['Technician'].dropna().unique()
+            technicians.extend(sorted(unique_techs))
+        
+        return technicians
     
-    def create_kpi_cards(self, owner=None):
-        """Create KPI cards for display"""
-        kpis = {
-            'Hydro Jetting Sold': self.calculate_hydro_jetting_sold(owner),
-            'Descaling Sold': self.calculate_descaling_sold(owner),
-            'On-Time Arrival Rate': f"{self.calculate_on_time_arrival(owner)}%",
-            '5★ Reviews': f"{self.calculate_five_star_reviews(owner)}%",
-            'Warranty Call Rate': f"{self.calculate_warranty_call_rate(owner)}%",
-            'Upsell Conversion Rate': f"{self.calculate_upsell_conversion(owner)}%"
-        }
-        return kpis
+    def create_progress_bar_html(self, value, goal, label, format_type="number"):
+        """Create progress bar HTML similar to the image"""
+        if goal == 0:
+            progress_percent = 0
+        else:
+            progress_percent = min((value / goal) * 100, 100)
+        
+        # Color coding based on progress
+        if progress_percent >= 100:
+            color = "#4CAF50"  # Green
+            icon = "✓"
+        elif progress_percent >= 80:
+            color = "#2196F3"  # Blue
+            icon = "●"
+        elif progress_percent >= 60:
+            color = "#FF9800"  # Orange
+            icon = "▲"
+        else:
+            color = "#F44336"  # Red
+            icon = "▼"
+        
+        # Format values
+        if format_type == "currency":
+            value_str = f"${value:,.2f}"
+            goal_str = f"${goal:,.0f}"
+        elif format_type == "percentage":
+            value_str = f"{value:.1f}%"
+            goal_str = f"{goal:.0f}%"
+        else:
+            value_str = f"{value:,.0f}"
+            goal_str = f"{goal:,.0f}"
+        
+        return f"""
+        <div class="progress-kpi">
+            <div class="progress-header">
+                <span class="progress-label">{label}</span>
+                <span class="progress-value">{value_str} {icon}</span>
+                <span class="progress-goal">{goal_str}</span>
+            </div>
+            <div style="background-color: #e0e0e0; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div style="background-color: {color}; height: 100%; width: {progress_percent}%; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+        """
     
-    def create_kpi_charts(self):
-        """Create charts for all KPIs by opportunity owner"""
-        owners = self.get_opportunity_owners()
+    def create_progress_kpis(self, technician='All'):
+        """Create progress-style KPIs like in the image"""
+        st.subheader("📊 Performance Metrics")
         
-        # Prepare data for charts
-        chart_data = []
-        for owner in owners:
-            kpis = self.create_kpi_cards(owner)
-            chart_data.append({
-                'Owner': owner,
-                'Hydro Jetting': kpis['Hydro Jetting Sold'],
-                'Descaling': kpis['Descaling Sold'],
-                'On-Time Rate': float(str(kpis['On-Time Arrival Rate']).replace('%', '')),
-                '5★ Reviews': float(str(kpis['5★ Reviews']).replace('%', '')),
-                'Warranty Rate': float(str(kpis['Warranty Call Rate']).replace('%', '')),
-                'Upsell Rate': float(str(kpis['Upsell Conversion Rate']).replace('%', ''))
-            })
+        # Calculate KPIs
+        avg_ticket = self.calculate_avg_ticket(technician)
+        job_close_rate = self.calculate_job_close_rate(technician)
+        weekly_revenue = self.calculate_weekly_revenue(technician)
+        avg_efficiency = self.calculate_avg_job_efficiency(technician)
+        compliance_rate = self.calculate_compliance_rate(technician)
+        membership_win_rate = self.calculate_membership_win_rate(technician)
         
-        chart_df = pd.DataFrame(chart_data)
+        # Display progress bars
+        col1, col2 = st.columns(2)
         
-        # Create subplots
-        fig = make_subplots(
-            rows=2, cols=3,
-            subplot_titles=('💧 Hydro Jetting Sold', '🔧 Descaling Sold', '⏰ On-Time Arrival Rate (%)',
-                          '⭐ 5★ Reviews (%)', '🔄 Warranty Call Rate (%)', '📈 Upsell Conversion Rate (%)'),
-            specs=[[{"secondary_y": False}, {"secondary_y": False}, {"secondary_y": False}],
-                   [{"secondary_y": False}, {"secondary_y": False}, {"secondary_y": False}]]
-        )
+        with col1:
+            st.markdown(self.create_progress_bar_html(avg_ticket, 2500, "Avg Ticket", "currency"), unsafe_allow_html=True)
+            st.markdown(self.create_progress_bar_html(job_close_rate, 80, "Job Close Rate", "percentage"), unsafe_allow_html=True)
+            st.markdown(self.create_progress_bar_html(weekly_revenue, 20000, "Weekly Revenue", "currency"), unsafe_allow_html=True)
         
-        # Color palette
-        colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe']
+        with col2:
+            st.markdown(self.create_progress_bar_html(avg_efficiency, 100, "Avg Job Eff", "percentage"), unsafe_allow_html=True)
+            st.markdown(self.create_progress_bar_html(compliance_rate, 100, "Compliance", "percentage"), unsafe_allow_html=True)
+            st.markdown(self.create_progress_bar_html(membership_win_rate, 25, "Membership Win Rate", "percentage"), unsafe_allow_html=True)
         
-        # Add bar charts
-        fig.add_trace(go.Bar(x=chart_df['Owner'], y=chart_df['Hydro Jetting'], 
-                            name='Hydro Jetting', showlegend=False, marker_color=colors[0]), row=1, col=1)
-        fig.add_trace(go.Bar(x=chart_df['Owner'], y=chart_df['Descaling'], 
-                            name='Descaling', showlegend=False, marker_color=colors[1]), row=1, col=2)
-        fig.add_trace(go.Bar(x=chart_df['Owner'], y=chart_df['On-Time Rate'], 
-                            name='On-Time Rate', showlegend=False, marker_color=colors[2]), row=1, col=3)
-        fig.add_trace(go.Bar(x=chart_df['Owner'], y=chart_df['5★ Reviews'], 
-                            name='5★ Reviews', showlegend=False, marker_color=colors[3]), row=2, col=1)
-        fig.add_trace(go.Bar(x=chart_df['Owner'], y=chart_df['Warranty Rate'], 
-                            name='Warranty Rate', showlegend=False, marker_color=colors[4]), row=2, col=2)
-        fig.add_trace(go.Bar(x=chart_df['Owner'], y=chart_df['Upsell Rate'], 
-                            name='Upsell Rate', showlegend=False, marker_color=colors[5]), row=2, col=3)
-        
-        fig.update_layout(
-            height=600, 
-            showlegend=False, 
-            title_text="📊 KPI Performance by Opportunity Owner",
-            title_font_size=20,
-            title_font_color='#2c3e50'
-        )
-        fig.update_xaxes(tickangle=45)
-        
-        return fig
-
-def display_metric_card(icon, value, label, col):
-    """Display a beautiful metric card"""
-    with col:
-        st.markdown(f"""
-        <div class="metric-container">
-            <div class="metric-icon">{icon}</div>
-            <div class="metric-value">{value}</div>
-            <div class="metric-label">{label}</div>
+        # Additional threshold information
+        st.markdown("""
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin: 1rem 0; border: 1px solid #e9ecef;">
+            <strong>Thresholds:</strong> Avg Ticket: $2,500 | Job Close Rate: 80% | Weekly Revenue: $20,000 | 
+            Job Efficiency: 100% | Compliance: 100% | Membership Win: 25%
         </div>
         """, unsafe_allow_html=True)
-
-# Main app
+    
+    def create_kpi_cards(self, technician='All'):
+        """Create KPI cards display"""
+        st.subheader("🎯 Service KPIs")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            hydro_value = self.calculate_kpi_hydro_jetting(technician)
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{hydro_value}</div>
+                <div class="kpi-label">Hydro Jetting Sold</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            on_time_value = self.calculate_on_time_arrival(technician)
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{on_time_value:.1f}%</div>
+                <div class="kpi-label">On-Time Arrival Rate</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            descaling_value = self.calculate_kpi_descaling(technician)
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{descaling_value}</div>
+                <div class="kpi-label">Descaling Sold</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            reviews_value = self.calculate_five_star_reviews(technician)
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{reviews_value}</div>
+                <div class="kpi-label">5★ Reviews</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            warranty_value = self.calculate_warranty_call_rate(technician)
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{warranty_value:.1f}%</div>
+                <div class="kpi-label">Warranty Call Rate</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            upsell_value = self.calculate_upsell_conversion(technician)
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{upsell_value:.1f}%</div>
+                <div class="kpi-label">Upsell Conversion Rate</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    def create_job_details_table(self, technician='All'):
+        """Create job details table like in the image"""
+        if self.merged_df is None:
+            return
+        
+        st.subheader("📋 Job Details")
+        
+        df = self.merged_df.copy()
+        if technician and technician != 'All':
+            df = df[df['Technician'] == technician]
+        
+        # Select and format relevant columns
+        display_cols = []
+        col_mapping = {
+            'Job': 'Job',
+            'Appt Status': 'Won/Lost',
+            'Customer Email': 'Customer',
+            'Phone': 'Phone',
+            'Revenue': 'Revenue Credit',
+            'Job Efficiency': 'Efficiency',
+            'Service Category': 'Service'
+        }
+        
+        # Build display dataframe
+        display_df = pd.DataFrame()
+        
+        for original_col, display_col in col_mapping.items():
+            if original_col in df.columns:
+                display_df[display_col] = df[original_col]
+        
+        # Add membership win column
+        if 'Items_Sold' in df.columns or 'Service Category' in df.columns:
+            membership_win = []
+            for idx, row in df.iterrows():
+                has_membership = False
+                if 'Items_Sold' in df.columns and pd.notna(row['Items_Sold']):
+                    has_membership = 'membership' in str(row['Items_Sold']).lower()
+                elif 'Service Category' in df.columns and pd.notna(row['Service Category']):
+                    has_membership = 'membership' in str(row['Service Category']).lower()
+                
+                membership_win.append('Yes' if has_membership else 'No')
+            
+            display_df['Membership Win'] = membership_win
+        
+        # Format the dataframe
+        if 'Revenue Credit' in display_df.columns:
+            def format_revenue(x):
+                if pd.notna(x) and isinstance(x, (int, float)):
+                    return f"${x:,.2f}"
+                else:
+                    return "$0.00"
+            
+            display_df['Revenue Credit'] = display_df['Revenue Credit'].apply(format_revenue)
+        
+        if 'Efficiency' in display_df.columns:
+            def format_efficiency(x):
+                if pd.notna(x):
+                    try:
+                        # Try to convert to float first
+                        if isinstance(x, str):
+                            # Remove % sign if present and convert to float
+                            x_clean = x.replace('%', '').strip()
+                            if x_clean:
+                                x_float = float(x_clean)
+                                return f"{x_float:.0f}%"
+                            else:
+                                return "0%"
+                        elif isinstance(x, (int, float)):
+                            return f"{x:.0f}%"
+                        else:
+                            return str(x)
+                    except (ValueError, TypeError):
+                        return str(x) if str(x) != 'nan' else "0%"
+                else:
+                    return "0%"
+            
+            display_df['Efficiency'] = display_df['Efficiency'].apply(format_efficiency)
+        
+        if 'Won/Lost' in display_df.columns:
+            display_df['Won/Lost'] = display_df['Won/Lost'].apply(lambda x: 'Won' if x == 'Completed' else 'Lost')
+        
+        # Display the table
+        st.dataframe(display_df.head(20), use_container_width=True)
+    
+    def create_charts(self):
+        """Create visualization charts"""
+        if self.merged_df is None:
+            return
+        
+        st.subheader("📈 Performance Analytics")
+        
+        # Chart 1: Revenue by Technician
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'Technician' in self.merged_df.columns and 'Revenue' in self.merged_df.columns:
+                # Filter out null values and calculate revenue by technician
+                revenue_data = self.merged_df[self.merged_df['Revenue'].notna() & self.merged_df['Technician'].notna()]
+                if not revenue_data.empty:
+                    revenue_by_tech = revenue_data.groupby('Technician')['Revenue'].sum().reset_index()
+                    fig1 = px.bar(revenue_by_tech, x='Technician', y='Revenue', 
+                                title='Revenue by Technician', color='Revenue')
+                    fig1.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig1, use_container_width=True)
+                else:
+                    st.info("No revenue data available for chart")
+        
+        with col2:
+            if 'Appt Status' in self.merged_df.columns:
+                status_count = self.merged_df['Appt Status'].value_counts()
+                fig2 = px.pie(values=status_count.values, names=status_count.index, 
+                            title='Appointment Status Distribution')
+                st.plotly_chart(fig2, use_container_width=True)
+    def create_charts(self):
+        """Create visualization charts"""
+        if self.merged_df is None:
+            return
+        
+        st.subheader("📈 Performance Analytics")
+        
+        # Chart 1: Revenue by Technician
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'Technician' in self.merged_df.columns and 'Revenue' in self.merged_df.columns:
+                revenue_by_tech = self.merged_df.groupby('Technician')['Revenue'].sum().reset_index()
+                fig1 = px.bar(revenue_by_tech, x='Technician', y='Revenue', 
+                            title='Revenue by Technician', color='Revenue')
+                fig1.update_layout(xaxis_tickangle=-45)
+                st.plotly_chart(fig1, use_container_width=True)
+        
+        with col2:
+            if 'Appt Status' in self.merged_df.columns:
+                status_count = self.merged_df['Appt Status'].value_counts()
+                fig2 = px.pie(values=status_count.values, names=status_count.index, 
+                            title='Appointment Status Distribution')
+                st.plotly_chart(fig2, use_container_width=True)
+        
+        # Chart 2: Service Category Performance
+        if 'Service Category' in self.merged_df.columns:
+            service_counts = self.merged_df['Service Category'].value_counts().head(10)
+            fig3 = px.bar(x=service_counts.index, y=service_counts.values,
+                        title='Top 10 Service Categories', labels={'y': 'Count', 'x': 'Service Category'})
+            fig3.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig3, use_container_width=True)
+        
+        # Chart 3: Jobs Over Time
+        if 'Created At' in self.merged_df.columns:
+            try:
+                self.merged_df['Created At'] = pd.to_datetime(self.merged_df['Created At'])
+                jobs_over_time = self.merged_df.groupby(self.merged_df['Created At'].dt.date).size().reset_index()
+                jobs_over_time.columns = ['Date', 'Job Count']
+                fig4 = px.line(jobs_over_time, x='Date', y='Job Count', 
+                             title='Jobs Created Over Time')
+                st.plotly_chart(fig4, use_container_width=True)
+            except:
+                st.info("Could not parse date information for time series chart")
 def main():
     st.markdown('<h1 class="main-header">🔧 Service Business KPI Dashboard</h1>', unsafe_allow_html=True)
     
-    # Initialize session state for data persistence
-    if 'data_loaded' not in st.session_state:
-        st.session_state.data_loaded = False
-    if 'dashboard' not in st.session_state:
-        st.session_state.dashboard = ServiceKPIDashboard()
+    # Initialize dashboard
+    dashboard = ServiceDashboard()
     
     # Sidebar for file uploads
-    with st.sidebar:
-        st.markdown('<div class="sidebar-header">📁 Upload Data Files</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-        appointments_file = st.file_uploader(
-            "📋 Upload Appointments Report",
-            type=['xlsx', 'xls'],
-            help="Upload your appointments/jobs Excel file"
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-        invoice_file = st.file_uploader(
-            "📄 Upload Invoice/Items Report",
-            type=['xlsx', 'xls'],
-            help="Upload your invoice/line items Excel file"
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-        job_times_file = st.file_uploader(
-            "⏱️ Upload Job Times Report",
-            type=['xlsx', 'xls'],
-            help="Upload your job times Excel file"
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        process_button = st.button("🚀 Process Data", type="primary")
+    st.sidebar.header("📁 Data Upload")
     
-    # Main content area
-    if process_button and appointments_file and invoice_file and job_times_file:
-        with st.spinner("🔄 Processing data..."):
-            # Load data
-            success, message = st.session_state.dashboard.load_data(appointments_file, invoice_file, job_times_file)
-            
-            if success:
-                st.success(f"✅ {message}")
+    appointments_file = st.sidebar.file_uploader("Upload Appointments Report", type=['xlsx', 'xls'])
+    items_sold_file = st.sidebar.file_uploader("Upload Items Sold Report", type=['xlsx', 'xls'])
+    opportunities_file = st.sidebar.file_uploader("Upload Opportunities Report", type=['xlsx', 'xls'])
+    job_times_file = st.sidebar.file_uploader("Upload Job Times Report", type=['xlsx', 'xls'])
+    
+    if appointments_file:
+        with st.spinner("Loading data..."):
+            if dashboard.load_data(appointments_file, items_sold_file, opportunities_file, job_times_file):
+                if dashboard.merge_data():
+                    st.success("✅ Data loaded and merged successfully!")
+                    
+                    # Sidebar filters
+                    st.sidebar.header("🔍 Filters")
+                    technicians = dashboard.get_technicians()
+                    selected_technician = st.sidebar.selectbox("Select Technician", technicians)
+                    
+                    # Date range filter
+                    if dashboard.merged_df is not None and 'Created At' in dashboard.merged_df.columns:
+                        try:
+                            dashboard.merged_df['Created At'] = pd.to_datetime(dashboard.merged_df['Created At'])
+                            min_date = dashboard.merged_df['Created At'].min().date()
+                            max_date = dashboard.merged_df['Created At'].max().date()
+                            
+                            date_range = st.sidebar.date_input(
+                                "Select Date Range",
+                                value=(min_date, max_date),
+                                min_value=min_date,
+                                max_value=max_date
+                            )
+                            
+                            if len(date_range) == 2:
+                                start_date, end_date = date_range
+                                # Filter data by date range
+                                mask = (dashboard.merged_df['Created At'].dt.date >= start_date) & (dashboard.merged_df['Created At'].dt.date <= end_date)
+                                dashboard.merged_df = dashboard.merged_df.loc[mask]
+                        except Exception as e:
+                            st.sidebar.warning(f"Date filtering issue: {str(e)}")
+                    
+                    # Main dashboard content
+                    st.markdown("---")
+                    
+                    # Display progress KPIs
+                    dashboard.create_progress_kpis(selected_technician)
+                    
+                    st.markdown("---")
+                    
+                    # Display KPI cards
+                    dashboard.create_kpi_cards(selected_technician)
+                    
+                    st.markdown("---")
+                    
+                    # Display job details table
+                    dashboard.create_job_details_table(selected_technician)
+                    
+                    st.markdown("---")
+                    
+                    # Display charts
+                    dashboard.create_charts()
+                    
+                    # Data summary section
+                    st.markdown("---")
+                    st.subheader("📊 Data Summary")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Total Jobs", dashboard.merged_df.shape[0])
+                    
+                    with col2:
+                        if 'Revenue' in dashboard.merged_df.columns:
+                            total_revenue = dashboard.merged_df['Revenue'].sum()
+                            st.metric("Total Revenue", f"${total_revenue:,.2f}")
+                        else:
+                            st.metric("Total Revenue", "N/A")
+                    
+                    with col3:
+                        if 'Technician' in dashboard.merged_df.columns:
+                            unique_techs = dashboard.merged_df['Technician'].nunique()
+                            st.metric("Active Technicians", unique_techs)
+                        else:
+                            st.metric("Active Technicians", "N/A")
+                    
+                    # Export functionality
+                    st.markdown("---")
+                    st.subheader("📥 Export Data")
+                    
+                    # Create export button
+                    if st.button("Export Current View to Excel"):
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            # Export filtered data
+                            export_df = dashboard.merged_df.copy()
+                            if selected_technician != 'All':
+                                export_df = export_df[export_df['Technician'] == selected_technician]
+                            
+                            export_df.to_excel(writer, sheet_name='Dashboard_Data', index=False)
+                            
+                            # Create summary sheet
+                            summary_data = {
+                                'Metric': ['Average Ticket', 'Job Close Rate', 'Weekly Revenue', 'Job Efficiency', 'Compliance Rate', 'Membership Win Rate'],
+                                'Value': [
+                                    dashboard.calculate_avg_ticket(selected_technician),
+                                    dashboard.calculate_job_close_rate(selected_technician),
+                                    dashboard.calculate_weekly_revenue(selected_technician),
+                                    dashboard.calculate_avg_job_efficiency(selected_technician),
+                                    dashboard.calculate_compliance_rate(selected_technician),
+                                    dashboard.calculate_membership_win_rate(selected_technician)
+                                ]
+                            }
+                            summary_df = pd.DataFrame(summary_data)
+                            summary_df.to_excel(writer, sheet_name='KPI_Summary', index=False)
+                        
+                        output.seek(0)
+                        st.download_button(
+                            label="Download Excel File",
+                            data=output.getvalue(),
+                            file_name=f"service_dashboard_{selected_technician}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                    
+                    # Debug information (optional)
+                    with st.expander("🔍 Debug Information"):
+                        st.write("**Available Columns:**")
+                        st.write(list(dashboard.merged_df.columns))
+                        st.write("**Data Shape:**", dashboard.merged_df.shape)
+                        st.write("**Sample Data:**")
+                        st.dataframe(dashboard.merged_df.head())
                 
-                # Validate data
-                validation_issues = st.session_state.dashboard.validate_data()
-                if validation_issues:
-                    st.warning("⚠️ Data validation issues found:")
-                    for issue in validation_issues:
-                        st.write(f"• {issue}")
                 else:
-                    st.success("✅ Data validation passed!")
-                
-                # Merge data
-                success, message = st.session_state.dashboard.merge_data()
-                if success:
-                    st.success(f"✅ {message}")
-                    st.session_state.data_loaded = True
-                else:
-                    st.error(f"❌ {message}")
+                    st.error("❌ Failed to merge data. Please check your file formats.")
             else:
-                st.error(f"❌ {message}")
-    
-    # Display dashboard if data is loaded
-    if st.session_state.data_loaded:
-        dashboard = st.session_state.dashboard
-        
-        # Display dashboard
-        st.markdown("---")
-        
-        # Opportunity owner selection
-        owners = dashboard.get_opportunity_owners()
-        st.markdown('<div class="section-header">👥 Select Team Member</div>', unsafe_allow_html=True)
-        selected_owner = st.selectbox(
-            "Choose team member or view overall performance",
-            ['All Team Members'] + owners,
-            index=0,
-            key="owner_selector"
-        )
-                    
-        # Display KPIs
-        st.markdown('<div class="section-header">📊 Key Performance Indicators</div>', unsafe_allow_html=True)
-        
-        if selected_owner == 'All Team Members':
-            # Show overall KPIs
-            overall_kpis = dashboard.create_kpi_cards()
-            
-            col1, col2, col3 = st.columns(3)
-            display_metric_card("💧", overall_kpis['Hydro Jetting Sold'], "Hydro Jetting Sold", col1)
-            display_metric_card("🔧", overall_kpis['Descaling Sold'], "Descaling Sold", col2)
-            display_metric_card("⏰", overall_kpis['On-Time Arrival Rate'], "On-Time Arrival Rate", col3)
-            
-            col4, col5, col6 = st.columns(3)
-            display_metric_card("⭐", overall_kpis['5★ Reviews'], "5-Star Reviews", col4)
-            display_metric_card("🔄", overall_kpis['Warranty Call Rate'], "Warranty Call Rate", col5)
-            display_metric_card("📈", overall_kpis['Upsell Conversion Rate'], "Upsell Conversion", col6)
-            
-            # Show charts for all owners
-            st.markdown('<div class="section-header">📊 Performance Comparison</div>', unsafe_allow_html=True)
-            if len(owners) > 0:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                fig = dashboard.create_kpi_charts()
-                st.plotly_chart(fig, use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            # Show individual owner KPIs
-            owner_kpis = dashboard.create_kpi_cards(selected_owner)
-            
-            col1, col2, col3 = st.columns(3)
-            display_metric_card("💧", owner_kpis['Hydro Jetting Sold'], "Hydro Jetting Sold", col1)
-            display_metric_card("🔧", owner_kpis['Descaling Sold'], "Descaling Sold", col2)
-            display_metric_card("⏰", owner_kpis['On-Time Arrival Rate'], "On-Time Arrival Rate", col3)
-            
-            col4, col5, col6 = st.columns(3)
-            display_metric_card("⭐", owner_kpis['5★ Reviews'], "5-Star Reviews", col4)
-            display_metric_card("🔄", owner_kpis['Warranty Call Rate'], "Warranty Call Rate", col5)
-            display_metric_card("📈", owner_kpis['Upsell Conversion Rate'], "Upsell Conversion", col6)
-            
-            # Show individual performance in context
-            st.markdown('<div class="section-header">📊 Team Performance Context</div>', unsafe_allow_html=True)
-            if len(owners) > 1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                fig = dashboard.create_kpi_charts()
-                st.plotly_chart(fig, use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Data quality indicator
-        st.markdown("---")
-        st.markdown('<div class="section-header">🔍 Data Quality Monitor</div>', unsafe_allow_html=True)
-        total_records = len(dashboard.merged_data)
-        valid_records = len(dashboard.merged_data.dropna(subset=['Opportunity Owner']))
-        quality_score = (valid_records / total_records) * 100
-        
-        if quality_score >= 90:
-            quality_class = "quality-excellent"
-            icon = "✅"
-            status = "Excellent"
-        elif quality_score >= 70:
-            quality_class = "quality-good"
-            icon = "⚠️"
-            status = "Good"
-        else:
-            quality_class = "quality-poor"
-            icon = "❌"
-            status = "Needs Attention"
-        
-        st.markdown(f"""
-        <div class="status-card {quality_class}">
-            <h3>{icon} Data Quality: {quality_score:.1f}% ({status})</h3>
-            <p>📊 Total Records: {total_records} | ✅ Valid Records: {valid_records}</p>
-        </div>
-        """, unsafe_allow_html=True)
-                    
-    elif not (appointments_file and invoice_file and job_times_file):
-        st.markdown(f"""
-        <div class="info-box">
-            <h3>📤 Getting Started</h3>
-            <p>Please upload all three Excel files in the sidebar to begin your KPI analysis!</p>
-        </div>
-        """, unsafe_allow_html=True)
+                st.error("❌ Failed to load data. Please check your file formats.")
+    else:
+        st.info("👆 Please upload at least the Appointments Report to get started.")
         
         # Show sample data format
         st.markdown("---")
-        st.markdown('<div class="section-header">📋 Required Data Format</div>', unsafe_allow_html=True)
+        st.subheader("📋 Expected Data Format")
         
-        with st.expander("📋 Appointments Report Format"):
-            st.markdown("""
-            **Required columns:**
-            - **Job** (Unique identifier)
-            - **Technician** (Staff member name)
-            - **Service Category** (Type of service)
-            - **Appt Status** (Completed, Pending, etc.)
-            - **Revenue** (Job value)
-            """)
+        st.markdown("**Appointments Report should contain:**")
+        st.code("""
+        - Job (Job ID)
+        - Technician
+        - Customer Email
+        - Phone
+        - Appt Status (e.g., 'Completed', 'Cancelled')
+        - Created At (Date)
+        - Revenue
+        - Service Category
+        """)
         
-        with st.expander("📄 Invoice/Items Report Format"):
-            st.markdown("""
-            **Required columns:**
-            - **Job** (Unique identifier)
-            - **Category** (Service category)
-            - **Line Item** (Specific service/product)
-            - **Price** (Item cost)
-            """)
+        st.markdown("**Items Sold Report should contain:**")
+        st.code("""
+        - Customer Email
+        - Line Item
+        - Price
+        - Quantity
+        """)
         
-        with st.expander("⏱️ Job Times Report Format"):
-            st.markdown("""
-            **Required columns:**
-            - **Job** (Unique identifier)
-            - **Opportunity Owner** (Team member responsible)
-            - **End Result** (Won, Lost, etc.)
-            - **Job Efficiency** (Performance percentage)
-            """)
-    
-    # Show message if files are uploaded but not processed
-    elif appointments_file and invoice_file and job_times_file and not st.session_state.data_loaded:
-        st.markdown(f"""
-        <div class="info-box">
-            <h3>🚀 Ready to Process!</h3>
-            <p>All files uploaded successfully! Click the 'Process Data' button in the sidebar to generate your beautiful KPI dashboard.</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("**Opportunities Report should contain:**")
+        st.code("""
+        - Job
+        - Opportunity details
+        """)
+        
+        st.markdown("**Job Times Report should contain:**")
+        st.code("""
+        - Job (Job ID)
+        - Job Efficiency
+        - Time-related metrics
+        """)
 
+# Run the application
 if __name__ == "__main__":
     main()
